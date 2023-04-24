@@ -12,6 +12,10 @@ B3AM performs beamforming analysis on short individual time-frequency windows of
 - a txt-file containing information about the station locations in three columns:
 	stationname	 longitude in degree	latitude in degree
 
+Download all files and folders in this repository in a directory of your choice.
+Alternatively, if you are familiar with Matlab add-ons, you can download and install just the toolbox file
+- B3AM.mltbx
+
 Additional functions required NOT provided with this package - please download separately:
 - rdmseed.m (https://uk.mathworks.com/matlabcentral/fileexchange/28803-rdmseed-and-mkmseed-read-and-write-miniseed-files)
 - export_fig (https://uk.mathworks.com/matlabcentral/fileexchange/23629-export_fig)
