@@ -13,6 +13,7 @@ B3AM performs beamforming analysis on short individual time-frequency windows of
 	stationname	 longitude in degree	latitude in degree
 
 Download all files and folders in this repository in a directory of your choice.
+
 Alternatively, if you are familiar with Matlab add-ons, you can download and install just the toolbox file
 - B3AM.mltbx
 
