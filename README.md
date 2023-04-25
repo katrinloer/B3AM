@@ -1,6 +1,8 @@
 # B3AM Userguide
 (version 0.1; under development - please test and provide feedback!)
 
+This is the MATLAB version. For a Python version see https://github.com/cl-finger/B3Ampy
+----------
 B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. 
 
 B3AM performs beamforming analysis on short individual time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types.
