@@ -1,8 +1,8 @@
-function [] = f_plotarf(coords,kmin,kmax,kres,ares,scaleflag)
+function [] = f_plotarf(coords,kmin,kmax,kres,ares,scaleflag,save_figs,figpath)
 
 n = size(coords,1);
 
-% Plot array
+%% Plot array
 figure('Color','white','Position',[10 400 500 500]);
 plot(coords(:,1),coords(:,2),'kv','MarkerFaceColor','k','MarkerSize',12)
 box on
@@ -12,6 +12,11 @@ xlabel('Easting in m')
 ylabel('Northing in m')
 set(gca,'Fontsize',20)
 title('Array geometry')
+
+if save_figs
+    figname = [figpath, '/01_network.png'];
+    print(figname,'-dpng')
+end
 
 %% Array response vector
 kr = linspace(0,kmax,kres)';
@@ -55,9 +60,8 @@ else
     labelunit = 'm^{-1}';
 end
 
-figure('Color','white','Position',[310 400 500 500]);
-
 % Response (polar)
+figure('Color','white','Position',[110 400 500 500]);
 Rcirc=circshift(R',round(size(R',2)/2),2);
 polarplot3d(Rcirc,'PlotType','surfn','RadialRange',[0 kmaxp],'PolarDirection','ccw',...
     'RadLabels',0,'RadLabelLocation',{90, 'top'},'AxisLocation','off','Fontsize',12,'RadLabelColor','w');
@@ -85,9 +89,14 @@ end
 cbar.FontSize = 20;
 cbar.Label.FontSize = 20;
 
+if save_figs
+    figname = [figpath, '/02_ARF.png'];
+    print(figname,'-dpng')
+end
+
 %% Plot ARF cross-sections (see Wathelet et al. 2008)
 
-figure('Color','white','Position',[810 400 500 500]);
+figure('Color','white','Position',[210 400 500 500]);
 p1 = plot(krp,R,'Color',[0.5 0.5 0.5]);
 hold on; 
 l1 = line([0 kmaxp],[0.5 0.5],'Color','k','Linewidth',2,'LineStyle',':');
@@ -99,6 +108,11 @@ box on
 grid on
 set(gca,'Fontsize',20)
 title('ARF cross-sections')
-legend([l1, l2], 'half height', 'minimum wavenumber')
+legend([l1, l2], 'half height', 'min. wavenumber')
+
+if save_figs
+    figname = [figpath, '/03_ARFx.png'];
+    print(figname,'-dpng')
+end
 
 end

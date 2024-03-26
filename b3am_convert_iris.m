@@ -2,6 +2,7 @@
 % suitable for 3 component data
 %
 % Functions required:
+% --> provided in folder ./b3am
 % - f_rearrange.m
 % - date2doy.m
 % - deg2utm.m
@@ -28,58 +29,55 @@
 % instrument response (nor any of the following B3AM code).
 %
 % Traces that do not comply with the specified desired length will be
-% shortened (when too long) or deleted (when too short)
-% --> info_raw2dat.txt
+% shortened (when too long), deleted or appended with zeros (when too short)
+% --> info_iris2dat....txt
 %
 % Katrin Loer, May 2016
 % Last modified: 
-% Feb 2022 (documentation)
+% Mar 2024 (bug fixed in appending data with zeros)
 %--------------------------------------------------------------------------
 
 clear
 
-dir_in = '/Users/s06kl9/Projects/FKanalysis/DANA/DATA/RAW/';         % path to input (raw data)
-dir_out = '/Users/s06kl9/Projects/FKanalysis/DANA/DATA/DAT/';   % path to output
+addpath b3am/
+
+dir_in = './DATA/';         % path to IRIS data (default is ./DATA/)
+dir_out = './IN/';          % path to output of converted data = input to beamformer (default is ./IN/)
 if exist(dir_out,'dir') == 0
     mkdir(dir_out);
 end
 
+allfiles = dir([dir_in 'RAW_XN_2001*']); 
+% specify which files (days) are to be considered; use a wildcard if
+% multiple days are to be used
+ndays = length(allfiles);
+
 % Provide desired length of data in seconds
-% (should correspond to length of input data)
-ldata_s = 60 * 60 * 2; 
-
-allfiles = dir([dir_in 'RAW_BH_20121116.mat']); 
-% This will take all .mat files in input directory
-% needs to be specified if only certain .mat files are to be considered
-nfiles = length(allfiles);
-
-txtname = strcat(dir_out,'info_raw2dat.txt'); % contains information about deleted traces
-fid = fopen(txtname,'wt');
+% (should be shorter than or equal to length of input data)
+ldata_s = 60 * 60 * 24;
+traceflag = 'append'; % 'append' with zeros or 'delete'
 
 %% Load IRIS raw data
 %--------------------------------------------------------------------------
 
 tic;
 
-% Suitable for parallell processing: if desired, uncomment here and l. 210 
-
-% mycluster = parcluster('local');
-% nwork = mycluster.NumWorkers;
-% mypool = parpool(nwork);
-
 % Loop over days (1 data file per day)
-for j = 1:nfiles
+for i = 1:ndays
         
-        infile = allfiles(j).name;
+        infile = allfiles(i).name;
         RAW = load([dir_in infile]);
         IrisData = RAW.IrisData; clear RAW
         
-        fprintf(fid,[infile(8:end-4) '\n']);
+        txtname = sprintf('%sinfo_iris2dat_%s.txt',dir_out,infile(5:14)); % contains information about traces
+        fid1 = fopen(txtname,'w');
         
+        fprintf(fid1,[infile(8:end-4) '\n']);
+
         %% Get parameters
         %------------------------------------------------------------------
         
-        ntotal = size(IrisData,2);          % number of tracel (number of stations x number of channels)
+        ntotal = size(IrisData,2);          % number of traces (number of stations x number of channels)
         fs = IrisData(1).sampleRate;        % sampling rate
         dt = 1/fs;                          % sampling period
                 
@@ -95,61 +93,68 @@ for j = 1:nfiles
         channels = cell(1,ntotal);
         t_start = zeros(1,ntotal);
         t_end = zeros(1,ntotal);
-        for i = 1:ntotal
+        for j = 1:ntotal
+
+            sr = IrisData(j).sampleRate;
+            [Y,M,D] = ymd(datetime(IrisData(j).startTime,'ConvertFrom','datenum'));
+            [hh,mm,ss] = hms(datetime(IrisData(j).startTime,'ConvertFrom','datenum'));
+            startSample = (hh * 60 * 60 + mm * 60 + ss) * sr + 1;
                         
-            ldata_i = size(IrisData(i).data,1);
+            ldata_i = size(IrisData(j).data,1);
             
             % Check if traces are too short or too long
-            if  ldata_i < ldata % --> delete
+            if  ldata_i < ldata % --> delete or append with zeros
                 
-                warn_message = sprintf(...
-                    'Trace too short (number %d, l = %d, station = %s, channel = %s) - deleted',i,ldata_i,IrisData(i).station,IrisData(i).channel);
-                fprintf(fid,sprintf('%s\n',warn_message));                
-                data(1:ldata_i,i) = IrisData(i).data(1:end);                
-                delmask(i) = false;
-                
+                if strcmp(traceflag,'delete')
+                    warn_message = sprintf(...
+                        'Trace too short (number %d, l = %d, station = %s, channel = %s) - deleted',j,ldata_i,IrisData(j).station,IrisData(j).channel);
+                    fprintf(fid1,sprintf('%s\n',warn_message));
+                    delmask(j) = false;
+                elseif strcmp(traceflag,'append')
+                    warn_message = sprintf(...
+                        'Trace too short (number %d, l = %d, station = %s, channel = %s) - append with zeros',j,ldata_i,IrisData(j).station,IrisData(j).channel);
+                    fprintf(fid1,sprintf('%s\n',warn_message));
+                    data(startSample:(startSample+ldata_i-1),j) = detrend(IrisData(j).data(1:end));
+                    if (startSample+ldata_i-1)>ldata
+                        error('Appended trace too long: check start and end times of trace number %d',j);
+                    end
+
+                end
+
             elseif ldata_i > ldata % --> cut
                 
                 warn_message = sprintf(...
-                    'Trace too long (number %d, l = %d, station = %s, channel = %s) - cut at the end',i,ldata_i,IrisData(i).station,IrisData(i).channel);
-                fprintf(fid,sprintf('%s\n',warn_message));                
-                data(:,i) = IrisData(i).data(1:ldata);
+                    'Trace too long (number %d, l = %d, station = %s, channel = %s) - cut at the end',j,ldata_i,IrisData(j).station,IrisData(j).channel);
+                fprintf(fid1,sprintf('%s\n',warn_message));                
+                data(:,j) = detrend(IrisData(j).data(1:ldata));
                 
             else                
                 
-                data(:,i) = IrisData(i).data(1:ldata);
+                data(:,j) = detrend(IrisData(j).data(1:ldata));
                 
             end           
             
-            stations{i} = IrisData(i).station;
-            channels{i} = IrisData(i).channel;
-            t_start(i) = IrisData(i).startTime;
-            t_end(i) = IrisData(i).endTime;
+            stations{j} = IrisData(j).station;
+            channels{j} = IrisData(j).channel;
+            t_start(j) = IrisData(j).startTime;
+            t_end(j) = IrisData(j).endTime;
             
         end
-        
-        if min(delmask) == 1
-            fprintf(fid,'All traces OK\n');
-        end
-        
+               
         %% Get coordinates
         %------------------------------------------------------------------
         
         lat = zeros(ntotal,1);
         lon = zeros(ntotal,1);
-%         for i = 1:ntotal; lat(i) = IrisData((i-1)*3+1).latitude; end
-%         for i = 1:ntotal; lon(i) = IrisData((i-1)*3+1).longitude; end
-        for i = 1:ntotal; lat(i) = IrisData(i).latitude; end
-        for i = 1:ntotal; lon(i) = IrisData(i).longitude; end
+        for j = 1:ntotal; lat(j) = IrisData(j).latitude; end
+        for j = 1:ntotal; lon(j) = IrisData(j).longitude; end
         
         % Convert from lat/lon to UTM (m)
         east = zeros(size(lat));
         north = zeros(size(lon));
-        for i = 1:length(lat)
-            [east(i), north(i), ~] = deg2utm(lat(i),lon(i));
+        for j = 1:length(lat)
+            [east(j), north(j), ~] = deg2utm(lat(j),lon(j));
         end
-        
-%         coords = [east north];
         
         clear lat lon
         
@@ -170,7 +175,7 @@ for j = 1:nfiles
         east = east(delmask);
         north = north(delmask);
         
-        fprintf(fid,'Number of stations: %d\n',round(length(stations)/3));
+        fprintf(fid1,'Number of stations: %d\n',round(length(stations)/3));
         
         %% Rearrange (E,E,E...; N,N,N...; Z,Z,Z...)
         %-----------------------------------------------------------------
@@ -210,13 +215,13 @@ for j = 1:nfiles
         yyyy = year(datetime(IrisData(1).startTime,'ConvertFrom','datenum'));
         ddd = date2doy(datetime(IrisData(1).startTime,'ConvertFrom','datenum'));
         
-        outfile = sprintf('DAT_new_%s_%04d%03d.mat',NN,yyyy,ddd);
+        outfile = sprintf('DAT_%s_%04d%03d.mat',NN,yyyy,ddd);
         DATname = strcat(dir_out,outfile);
         
         save(DATname,'DAT','-v7.3');
         
         % New station file with UTM coordinates
-        utmname = sprintf('%sstations_utm_%04d%03d.txt',dir_out,yyyy,ddd);
+        utmname = sprintf('%sstations_utm_%s_%04d%03d.txt',dir_out,NN,yyyy,ddd);
         fid = fopen(utmname,'w');
         nstat = length(DAT.h.coords);
         for j = 1:nstat
@@ -228,6 +233,8 @@ for j = 1:nfiles
         fclose(fid);
         
         fprintf('Done %s\n',infile);
+
+        fclose(fid1);
         
         toc
         
@@ -235,8 +242,4 @@ for j = 1:nfiles
         
 end
 
-% delete(mypool)
-
-fclose(fid);
-
-% EOF
+%% EOF

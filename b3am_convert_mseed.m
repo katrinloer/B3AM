@@ -1,8 +1,10 @@
 %% Convert (mini-)SEED data into B3AM-compatible MATLAB file
 % suitable for 3 component data
 %
+% Requires rdmseed.m --> please download from MathWorks and add path
+%
 % Additional functions required:
-% --> in folder ./b3am
+% --> provided in folder ./b3am
 % - f_rearrange.m
 % - date2doy.m
 % - deg2utm.m
@@ -12,7 +14,7 @@
 % - 1 mseed file per day, channel, and station
 % - sort your data according to date, i.e., have one folder per day
 % - the name of the day-folder should be yyyyddd
-%   yyyy = year (e.g. 2022)
+%   yyyy = year (e.g. 2017)
 %   ddd = day of year (between 001 and 365)
 % - example: /MyPath/2017021/   LH.DB01..HLE.2017.021
 %                               LH.DB01..HLN.2017.021
@@ -45,39 +47,42 @@
 % instrument response (nor any of the following B3AM code).
 %
 % Traces that do not comply with the specified desired length will be
-% shortened (when too long) or padded with zeros (when too short)
-% --> info_raw2dat.txt
+% shortened (when too long), deleted or appended with zeros (when too short)
+% --> info_mseed2dat....txt
 %
 %--------------------------------------------------------------------------
 % Katrin Loer
 % katrin.loer@abdn.ac.uk
 % Oct 2018
 % Last modified: 
-% Feb 2023 (documentation)
+% Mar 2024 (bug fixed reading directories on Mac)
 %--------------------------------------------------------------------------
 
 clear
 
-dir_in = '/Users/s06kl9/Projects/FKanalysis/GEMEX/DATA/2017/LH/RAW_newsort/';   % path to input (raw data, all days)
-dir_out = '/Users/s06kl9/Projects/FKanalysis/B3AM/DATA_TEST/DAT/';     % path to output
+addpath '/Users/kloer/Documents/MATLAB/rdmseed'
+
+dir_in = '/Volumes/HOMESERVER/ABDN/Projects/FKanalysis/GEMEX/DATA/2017/LH/RAW_newsort/';   % path to input (raw data, all days)
+dir_out = './INtest/';     % path to output
 if exist(dir_out,'dir') == 0 % output directory is created
     mkdir(dir_out);
 end
 
-stationfile = '/Users/s06kl9/Projects/FKanalysis/B3AM/DATA_TEST/stations_deg.txt';    % path to station file
+stationfile = '/Volumes/HOMESERVER/ABDN/Projects/FKanalysis/GEMEX/DATA/DATA_TEST/stations_deg.txt';    % path to station file
 nheader = 1;                                                                    % number of header lines in station file
 
 NN = 'LH'; % network identifier
+yyyy = '2017'; % year
 
 % Provide desired length of data in seconds
 % (should be shorter than or equal to length of input data)
 ldata_s = 60 * 60 * 24; 
+traceflag = 'delete'; % 'append' with zeros or 'delete'
 
 %% Don't change below here
 %--------------------------------------------------------------------------
 
-alldays = dir(dir_in); % all folders 
-alldays = alldays(~ismember({alldays.name},{'.','..'}));
+alldays = dir(sprintf('%s%s*',dir_in,yyyy)); % all folders 
 ndays = length(alldays); % number of days from number of folders
 
 %% Load SEED raw data
@@ -95,17 +100,20 @@ fclose(fid2);
 % Loop over days
 for i = 1:ndays
     
-    txtname = sprintf('%sinfo_mseed2DAT_%s.txt',dir_out,alldays(i).name);%strcat(dir_out,'info_raw2dat.txt'); % contains information about deleted traces
-    fid1 = fopen(txtname,'wt');
+    txtname = sprintf('%sinfo_mseed2dat_%s.txt',dir_out,alldays(i).name); % contains information about traces
+    fid1 = fopen(txtname,'w+');
+
+    fprintf(fid1,[alldays(i).name '\n']);
 
     allfiles = dir([dir_in, alldays(i).name]);
     allfiles = allfiles(~ismember({allfiles.name},{'.','..'}));
-    nfiles = length(allfiles);
+    ntotal = length(allfiles);
     
     k = 0;
+    delmask = true(ntotal,1);
     
-    % Loop over files (stations and channels)
-    for j = 1:nfiles
+    % Loop over all files (stations and channels)
+    for j = 1:ntotal
         D = rdmseed([dir_in alldays(i).name '/' allfiles(j).name]);
         data_help = cat(1,D.d);
             
@@ -122,12 +130,19 @@ for i = 1:ndays
         
         % Check if traces are too long or short
         ldata_help = length(data_help);
-        if  ldata_help < ldata % --> fill up with zeros
+        if  ldata_help < ldata % --> append with zeros
             
-            warn_message = sprintf(...
-                'Trace too short (number %d, l = %d, station = %s, channel = %s) - fill up with zeros',j,length(data_help),stat,chan);
-            fprintf(fid1,sprintf('%s\n',warn_message));
-            
+            if strcmp(traceflag,'delete')
+                warn_message = sprintf(...
+                    'Trace too short (number %d, l = %d, station = %s, channel = %s) - deleted',j,length(data_help),stat,chan);
+                fprintf(fid1,sprintf('%s\n',warn_message));
+                delmask(j) = false;
+            elseif strcmp(traceflag,'append')
+                warn_message = sprintf(...
+                    'Trace too short (number %d, l = %d, station = %s, channel = %s) - append with zeros',j,length(data_help),stat,chan);
+                fprintf(fid1,sprintf('%s\n',warn_message));
+            end
+
         elseif ldata_help > ldata % --> cut at the end
             
                 warn_message = sprintf(...
@@ -154,7 +169,21 @@ for i = 1:ndays
         
     end
     
-    nstat = k/3;
+    % Remove traces that are too short (if traceflag='deleted')
+    %-----------------------------------------------------------------
+
+    data = data(:,delmask);
+
+    stations = stations(delmask);
+    ntotal = size(stations,2);
+    nstat = ntotal/3;
+
+    channels = channels(delmask);
+    t_start = t_start(delmask);
+
+    east = east(delmask);
+    north = north(delmask);
+
     fprintf(fid1,sprintf('Number of stations: %d\n',nstat));
     
     % Rearrange (E,E,E...; N,N,N...; Z,Z,Z...)
@@ -195,7 +224,7 @@ for i = 1:ndays
     save(DATname,'DAT','-v7.3');
     
     % New station file with UTM coordinates
-    utmname = sprintf('%sstations_utm_%s.txt',dir_out,alldays(i).name);
+    utmname = sprintf('%sstations_utm_%s_%s.txt',dir_out,NN,alldays(i).name);
     fid = fopen(utmname,'w');
     nstat = length(DAT.h.coords);
     for l = 1:nstat
@@ -207,11 +236,11 @@ for i = 1:ndays
     fclose(fid);
     
     fprintf('Done day %s\n',alldays(i).name);
+    fclose(fid1);
+
     toc
     
 end
-
-fclose(fid1);
 
 % Save this version of the script to output folder
 CurrentPath = pwd;

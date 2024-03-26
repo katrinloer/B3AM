@@ -1,23 +1,33 @@
 %% Check array response function (ARF) and grid resolution
+% Katrin Loer 
+% k.loer@tudelft.nl
+% Apr 2023 
 %
-% Katrin Loer
-% katrin.loer@abdn.ac.uk
-% Apr 2022
-% last modified: Apr 2022
+% last modified: 
+% - Feb 2024: improved figures
 %%-------------------------------------------------------------------------
 
 close all
 clear
 
-% Load set of parameters
-%------------------------
-b3am_param;
+%% Please specify:
 
 % Add paths to plotting functions and colourmaps
-addpath('/Users/s06kl9/Projects/FKanalysis/SCRIPTS/crameri_v1');
-addpath('/Users/s06kl9/Projects/FKanalysis/B3AM/plot');
+addpath('/Users/kloer/Documents/MATLAB/crameri');
 
-%% PROCESSING PARAMETERS
+save_figs = false;
+
+%% PROCESSING PARAMETERS (don't change)
+
+% Load set of parameters
+b3am_param;
+addpath(plotfolder);
+addpath(beamfolder)
+
+figpath = './Figures';
+if exist(figpath,'dir')==0
+    [SUCCESS,MESSAGE,MESSAGEID] = mkdir(figpath);
+end
 
 % Compute wavenumber range from station spacing
 %----------------------------------------------
@@ -34,76 +44,45 @@ coords_txt(:,2) = S{3};
 clear S
 
 [mindist, maxdist, imin, jmin, imax, jmax] = f_compminmaxdist(coords_txt);
-% Note: theoretical coordinate information is used to define the frequency
+% Note: theoretical coordinate information is used to define the wavenumber
 % range. In the beamformer, coordinates of actually available stations
 % need to be used (from DAT.h.coords)
 
-fprintf('Minimum station spacing: dmin = %.0f m\n',mindist);
-fprintf('Maximum station spacing: dmax = %.0f m\n\n',maxdist);
+fprintf('Maximum station spacing: dmax = %.0f m\n',maxdist);
+fprintf('Minimum station spacing: dmin = %.0f m\n\n',mindist);
 
 % Wavenumber grid
-if exist('kmin','var')==0 && exist('kmax','var')==0
-    kmin = 1/(3*maxdist);
+if exist('kmax','var')==0   
     kmax = 1/(2*mindist);
 end
-
+if exist('kmin','var')==0  
+    kmin = 1/(3*maxdist);
+end
 if exist('kres','var')==0
     kres = 201;
 end
-procpars.kgrid = linspace(kmin,kmax,kres)';
 
+kgrid = linspace(0,kmax,kres)';
+
+% Wavelengths
 lmin = 1/kmax;
 lmax = 1/kmin;
 
-fprintf('Minimum wavelength: lmin = %.0f m\n',lmin);
-fprintf('Maximum wavelength: lmax = %.0f m\n\n',lmax);
+fprintf('Maximum wavelength: lmax = %.0f m\n',lmax);
+fprintf('Minimum wavelength: lmin = %.0f m\n\n',lmin);
 
-fprintf('Minimum wavenumber: kmin = %.3f 1/km\n',kmin*1000);
-fprintf('Maximum wavenumber: kmax = %.3f 1/km\n\n',kmax*1000);
+fprintf('Maximum wavenumber: kmax = %.3f 1/km\n',kmax*1000);
+fprintf('Minimum wavenumber (resolution limit): kmin = %.3f 1/km\n',kmin*1000);
+fprintf('Wavenumber step size for %d grid points: dk = %.3f 1/km\n\n',kres,kgrid(2)*1000);
 
-% Estimate frequency range from station spacing
-%----------------------------------------------
-% Adapted to surface waves!
-% See wavelength_frequency_test.m and comments in notebook (2022/08/12)
-
-if exist('fmin','var')==0 && exist('fmax','var')==0
-    
-    if lmin<=500
-        a = 401;
-        b = 3.39;
-    elseif lmin > 500
-        a = 4058;
-        b = 3818;
-    end
-    fmax = a / (lmin+b);
-    
-    if lmax<=500
-        a = 401;
-        b = 3.39;
-    elseif lmax > 500
-        a = 4058;
-        b = 3818;
-    end
-    fmin = a / (lmax+b);
-    
-    fmin = round(fmin,2);
-    fmax = round(fmax,2);
-    
-end
-
-frange = [fmin fmax];
-
-fprintf('Minimum frequency: fmin = %.2f Hz\n',fmin);
-fprintf('Maximum frequency: fmax = %.2f Hz\n\n',fmax);
-
-% More processing parameters
+%% More processing parameters
 %---------------------------
 
 % Azimuth grid
 if exist('ares','var')==0
-    ares = 5;
+    astep = 5;
 end
-procpars.agrid = -175:ares:180;
+procpars.agrid = -(180-astep):astep:180;
 
 % Dig grid
 if exist('dres','var')==0
@@ -122,5 +101,43 @@ end
 procpars.egrid = emin:eres:emax;
 
 %% Plot ARF
+%-----------
+% Plot array geometry, array response function (ARF), and cross sections of 
+% ARF to check wavenumber limits
+% 
+% Wathelet et al. (2008) recommend a maximum wavenumber above kmin for which A < 0.5 Amax
 
-f_plotarf(coords_txt,kmin,kmax,kres,ares,'norm')
+f_plotarf(coords_txt,kmin,kmax,kres,astep,'norm',save_figs,figpath)
+
+%% Frequency-dependent velocity grids
+%------------------------------------
+
+figure('Color','white','Position',[100 100 1000 500]); 
+load batlowS
+hold on
+plot(fmin./kgrid,kgrid,'-o','Color',batlowS(1,:))
+plot(fmax./kgrid,kgrid,'-o','Color',batlowS(2,:))
+xlim([0 5000])
+ylim([0 kmax])
+box on
+grid minor
+xlabel('velocity in m/s')
+ylabel('wavenumber in 1/m')
+set(gca,'Fontsize',18);
+
+legend(sprintf('%.2f Hz',fmin),sprintf('%.2f Hz',fmax))
+
+% Chosen frequencies
+fprintf('Maximum frequency: fmax = %.2f Hz\n',fmax);
+fprintf('Minimum frequency: fmin = %.2f Hz\n\n',fmin);
+
+% Velocities
+vmin = fmax/kmax;
+fprintf('Minimum velocity at %.2f Hz: vmax = %4.0f m/s\n',fmax,vmin);
+
+if save_figs
+    figname = [figpath, '/04_velocities.png'];
+    print(figname,'-dpng')
+end
+
+%% EOF

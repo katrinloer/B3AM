@@ -1,4 +1,5 @@
 %% B3AM: Beamformer for 3-component ambient noise
+% - Data processing
 % - Fourier transformation (FT)
 % - Frequency-wavenumber analysis (FK)
 % - Max beam response estimation (kmax)
@@ -11,7 +12,7 @@
 % Required input parameters: 
 % --> define in file ./b3am_param.m
 % - input directory: where data in Matlab format is located (DAT_NN_dddyyyy.mat)
-% - output directory: where kmax will be stored
+% - output directory: where beamformer output (kmax-files) will be stored
 %
 % Additional functions required:
 % --> in folder ./b3am
@@ -21,12 +22,15 @@
 % - extrema
 % - extrema2
 % - f_compminmaxdist
-% - f_extrema22
+% - f_extrema24
 % - f_FK3C_fast
 % - f_FK3C_SDM
 % - f_onebit
+% - f_polstates
+% - f_ramnorm
 % - f_ramnorm3C
 % - f_specwhite
+% - f_trunc3std
 % - polpar2cmplx22
 % - save_para_amp
 % - save_para_FT
@@ -34,16 +38,16 @@
 %
 % Default settings:
 % - tukey window (0.2) is applied
-% - time window computed as 4x largest period (lowest frequency)
-% - if no frequency range is provided, this is estimated from the station
-% spacing; fmin and fmax will be rounded to two digits after the decimal
-% point
+% - neighbouring beamforming time windows are not averaged (nblock = 1)
 %
 %%-------------------------------------------------------------------------
 % Katrin Loer
-% katrin.loer@abdn.ac.uk
+% k.loer@tudelft.nl
 % Aug 2020
-% last modified: Apr 2023
+% last modified: Mar 2024
+% - bug fixed in f_extrema24.m
+% - introduced f_polstates.m to store polarisation states in procpars.mat
+% - introduced f_trunc3std.m and f_ramnorm.m for temporal normalisation
 %
 % based on FK3C_FT.m and FK3C_FK.m by Nima Riahi
 % https://github.com/nimariahi/fk3c
@@ -57,84 +61,55 @@ clear
 b3am_param;
 
 addpath(beamfolder)
+addpath(plotfolder)
 
 disp(datetime)
 tic
 
 %% PROCESSING PARAMETERS
 
-% Compute wavenumber range from station spacing
-%----------------------------------------------
-    
+% Obtain total number of stations in the array    
 fid = fopen(stationfile,'r');
 S = textscan(fid, '%s %f %f', 'Headerlines', nheader);
 snames = S{1};
 nstat = length(snames);
 fprintf('Number of stations: %d\n\n',nstat);
 
+% Obtain station coordinates and compute minimum and maximum station
+% spacing
 coords_txt = zeros(nstat,2);
 coords_txt(:,1) = S{2};
 coords_txt(:,2) = S{3};
 clear S
-
 [mindist, maxdist, imin, jmin, imax, jmax] = f_compminmaxdist(coords_txt);
 % Note: theoretical coordinate information is used to define the frequency
 % range. In the beamformer, coordinates of actually available stations
 % need to be used (from DAT.h.coords)
 
-% Wavenumber limits
-if exist('kmin','var')==0 && exist('kmax','var')==0
-    kmin = 1/(3*maxdist);
+% Wavenumber grid
+if exist('kmax','var')==0   
     kmax = 1/(2*mindist);
 end
-
-if exist('kres','var')==0 
+if exist('kmin','var')==0  
+    kmin = 1/(3*maxdist);
+end
+if exist('kres','var')==0
     kres = 201;
 end
-procpars.kgrid = linspace(kmin,kmax,kres)';
 
+kgrid = linspace(0,kmax,kres)';
+procpars.kgrid = kgrid;
+procpars.kmin = kmin;
+
+% Wavelength limits
 lmin = 1/kmax; 
 lmax = 1/kmin; 
 
-% Compute frequency range from station spacing
-%----------------------------------------------
-% See readme.txt for more information
-
-if exist('fmin','var')==0 && exist('fmax','var')==0
-
-    if lmin<500
-        a = 401;
-        b = 3.39;
-    elseif lmin > 500
-        a = 4058;
-        b = 3818;
-    end
-    fmax = a / (lmin+b);
-    
-    if lmax<500
-        a = 401;
-        b = 3.39;
-    elseif lmax > 500
-        a = 4058;
-        b = 3818;
-    end
-    fmin = a / (lmax+b);
-    
-    fmin = round(fmin,2);
-    fmax = round(fmax,2);
-    
-end
-
-frange = [fmin fmax];
-
-% More processing parameters
-%---------------------------
-
 % Azimuth grid
 if exist('ares','var')==0
-    ares = 5;
+    astep = 5;
 end
-procpars.agrid = -175:ares:180;
+procpars.agrid = -(180-astep):astep:180;
 
 % Dig grid
 if exist('dres','var')==0
@@ -152,16 +127,30 @@ if exist('eres','var')==0
 end
 procpars.egrid = emin:eres:emax;
 
+% Beamforming window length
+if exist('twinf','var')==0
+    twinf = 10;
+end
+procpars.twinf = twinf;
+
+% Frequency limits
+frange = [fmin fmax];
+procpars.freqs =  fmin:fstep:fmax;
+
 %% LET'S START...
 
 allfiles = dir([indir sprintf('DAT_%s_*',netw)]);
+if isempty(allfiles)
+    error('No .mat data for network %s found - please check network code and input folder are correct!',netw)
+end
+
 nfiles = length(allfiles);
 if nfiles > 1
     warning('Processing of multiple days in beta mode...\n')
-%     error('nfiles > 1: Not working yet for more than one DAT structure!\n')
 end
 
 %% Loop over days
+
 for dd = 1:nfiles
     
 fprintf('Now loading Matlab data structure for day %d...\n\n',dd);
@@ -176,36 +165,77 @@ toc
 
 fprintf('Now pre-processing data for day %d...\n\n',dd)
 
-data = DAT.data; 
-ndata = size(data,2);
+% Store in procpars
+procpars.specwhite = specwhite;
+procpars.bpfilter = bpfilter;
+procpars.onebit = onebit;
+procpars.ramnorm = ramnorm;
+procpars.resample = resampledata;
+
+% data = DAT.data; 
+data_in = DAT.data; 
+ndata = size(data_in,2);
+
+if resampledata
+    [p,q] = rat(srnew/sr);
+    lnew = length(resample(data_in(:,1),p,q));
+    data = zeros(lnew,ndata);
+    sr = srnew;
+else
+    data = zeros(size(data_in));
+end
+
 for k = 1:ndata
     
     % Remove mean
-    data(:,k) = detrend(data(:,k));
+    data_help = detrend(data_in(:,k));
     
+    % Resample
+    if resampledata
+        data_help = resample(data_help,p,q);
+    end
+
     % Spectral whitening
     if specwhite
-        data(:,k) = f_specwhite(data(:,k),sr);
+        data_help = f_specwhite(data_help,sr);
     end
     
     % Band-pass filter
     if bpfilter
         Wn = W / (sr/2); % normalise cut-off frequencies
         [b, a] = butter(N, Wn); % band-pass filter
-        data(:,k) = filtfilt(b, a, data(:,k));
+        data_help = filtfilt(b, a, data_help);
     end
     
     % One-bit normalization
     if onebit
-        data(:,k) = f_onebit(data(:,k));
+        data_help = f_onebit(data_help);
+    end
+
+    % Truncate at 3x the standard deviation
+    if trunc3std
+        data_help = f_trunc3std(data_help);
     end
     
-    % Running-absolute-mean normalization
-    % (after Benson et al., 2007)
+    % Running-absolute-mean normalization (after Benson et al., 2007)
+    % Note: relative amplitudes of E/N/Z not preserved, takes long
     if ramnorm
-        data(:,k) = f_ramnorm3C(data(:,k),fmin,sr);
+        data_help = f_ramnorm(data_help,fmin,sr);
     end
+
+    % NEW
+    data(:,k) = data_help;
     
+end
+
+% Save processed data?
+if saveprocdat
+    PROC = DAT;
+    PROC.data = data;
+    PROC.procpars = procpars;
+    procdatname = sprintf('%sPROC%s',indir,allfiles(dd).name(4:end));
+    fprintf('Saving processed data in %s...\n',procdatname);
+    save(procdatname,'PROC','-v7.3')
 end
 
 toc
@@ -215,7 +245,7 @@ toc
 fprintf('Now performing Fourier transformation...\n\n');
 
 Tmax = 1/fmin;
-nwin = (4*Tmax) * sr;
+nwin = (procpars.twinf * Tmax) * sr;
 nwin = min(2^nextpow2(nwin),size(DAT.data,1));
 nfft = round(sr / fstep);
 nstep = nwin/2; % Sample size of time step (overlap)
@@ -224,11 +254,12 @@ nstep = nwin/2; % Sample size of time step (overlap)
 tukeyfrac = 0.2;
 win = tukeywin(nwin,tukeyfrac);
 
-% Create entried for 'procpars' structure to be kept for later
+% Create entries for 'procpars' structure to be kept for later
 procpars.nwin = nwin;
 procpars.nstep = nstep;
 procpars.tukeyfrac = tukeyfrac;
-procpars.freqs = fmin:fstep:fmax;
+procpars.Nblock = 1; % Nblock = 1: no averaging over neighbouring windows
+procpars.ntsubsample = 1;
 
 Nloc = size(DAT.h.coords,1);
 
@@ -297,6 +328,35 @@ toc
 %% Save processing parameters to output file
 % The same processing parameters are applied for all days
 
+% Design polarisation grid
+polstates = f_polstates(procpars.dgrid,procpars.egrid);
+
+% Set parameters for parallel computing
+if para
+    mycluster = parcluster('local');
+    if exist('nwork','var') == 0
+        nwork = min(length(f),mycluster.NumWorkers-1);
+    else
+        nwork = min(length(f),min(mycluster.NumWorkers-1,nwork));
+    end
+    if nwork <= 1
+        warning('Not enough workers available for parallel computing, switching to sequential mode.')
+        para = 0;
+        nwork = 1;
+    end
+else
+    nwork = 1;
+end
+
+% Collect in procpars
+procpars.polstates = polstates;
+procpars.nwork = nwork;
+procpars.specwhite = specwhite;
+procpars.onebit = onebit;
+procpars.bpfilter = bpfilter;
+procpars.ramnorm = ramnorm;
+
+% Save processing parameters (procpars)
 procfile = sprintf('%sprocpars.mat',outdir);
 save(procfile,'procpars')
 
@@ -314,8 +374,6 @@ crit2 = 'NOMAX'; % maximum number of extrema not limited
 if para == 1
     
     cmode = procpars.cmode;
-    mycluster = parcluster('local');
-    nwork = min(length(f),mycluster.NumWorkers-1);
     mypool = parpool(nwork);
     
     %  Loop over frequencies
@@ -344,7 +402,7 @@ if para == 1
         
         % Find strongest peaks
         %--------------------------------------------------------------
-        [kr_max,kth_max,pola_max,pola_ind,a_max,wave_ind] = f_extrema22(...
+        [kr_max,kth_max,pola_max,pola_ind,a_max,wave_ind] = f_extrema24(...
             P,Q,kr,kth,polstates,crit1,crit2,min_beam);
         
         % Save
@@ -386,7 +444,7 @@ elseif para == 0
         
         % Find strongest peaks
         %--------------------------------------------------------------
-        [kr_max,kth_max,pola_max,pola_ind,a_max,wave_ind] = f_extrema22(...
+        [kr_max,kth_max,pola_max,pola_ind,a_max,wave_ind] = f_extrema24(...
             P,Q,kr,kth,polstates,crit1,crit2,min_beam);
         
         % Save
@@ -402,6 +460,7 @@ elseif para == 0
 end % if parallel or not
 
 fprintf('Done FK spectra for %d frequencies for day %d.\n\n',length(f),dd)
+
 fprintf('Elapsed time is %.1f s\n',toc)
 
 end % loop over days
