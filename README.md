@@ -9,9 +9,10 @@ Python version: https://github.com/cl-finger/B3Ampy
 ----------
 B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. 
 
-B3AM performs beamforming analysis on short individual time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types.
+B3AM performs beamforming analysis on short time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types.
 
 Changes since v0.1:
+- Example added 
 - b3am_param.m: frequency range now to be provided manually
 - plot_b3am.m: bug fixed in direction of arrival plots; export_fig.m not required anymore
 - f_extrema24.m: error fixed in computation of standard deviation
@@ -20,9 +21,12 @@ Changes since v0.1:
 - batlowS.mat categorical colour map (Crameri, 2021) provided for convenience
 - plots provided in the Folder 'Figures' have been created with this version
 
-B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. 
+Parkfield Example
+=================
 
-B3AM performs beamforming analysis on short time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types.
+The folder _Example_Parkfield_ contains example output data and figures as returned by B3AM for one day of ambient noise recorded at the Parkfield array, California, US (Thurber and Roecker, 2000). The data are publicly available from the Seismological Facility for the Advancement of Geoscience (SAGE, former IRIS), and can be downloaded directly into MATLAB. Go to the SAGE homepage to download the MATLAB script irisFetch.m (http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisfetch.m/) and the required Java library (http://ds.iris.edu/ds/nodes/dmc/software/downloads/IRIS-WS/2-20-1/#Download). You can then use the script iris_getrawdata_example.m provided with the B3AM package to download data from the Parkfield (or another) array. In the script, specify the path to your irisFetch.m script and the Java library as both will be used in **iris_getrawdata_example.m**. Further parameters you need to define are the start and end date, the network code, names of stations in the network, channels, and storage location. **The default values in the script correspond to those used for the example**. Expect the download to take up to a few minutes per station for a single day of data depending on your network speed (here, it took around 25 minutes to download data from 34 stations).
+
+Follow the steps below to reprodoce the figures in Example_Parkfield/Figures. Again, default values provided in the code should produce the example output.
 
 0) What you need
 -----------------
@@ -51,14 +55,9 @@ Let's get started...
 B3AM will handle one file per day that contains seismic traces from all stations and all components.
 Your data need to be sorted by component in the order E, N, Z.
 If your data is already a .mat file (for example after downloading from IRIS directly into Matlab) you can use the script
-- b3am_convert_iris.m
-to bring the traces into the correct order.
-If your data comes in miniseed format, please use
-- b3am_convert_mseed.m
-and consider the guidelines provided in the script. 
+**b3am_convert_iris.m** to bring the traces into the correct order. If your data comes in miniseed format, please use **b3am_convert_mseed.m** and consider the guidelines provided in the script. 
 
-The output from either conversion script will be a (or multiple) file(s) called
-- DAT_NN_yyyyddd.mat
+The output from either conversion script will be a (or multiple) file(s) called DAT_NN_yyyyddd.mat
 where NN is the network code, yyyy is the year, and ddd the day of the year (between 001 and 365).
 If you are working with multiple days of ambient noise data, all resulting DAT files will be stored in the same folder.
 
@@ -66,11 +65,9 @@ Eventually, B3AM requires information about the station location in form of a tx
 stationname	 x-ccordinate in m	y-coordinate in m
 When running the provided conversion files for IRIS or mseed data, the station file is created automatically in the same folder as the rearranged data.
 
-Alternatively, this file can be created from any DAT file using the script
-- mk_stationfile.m
+Alternatively, this file can be created from any DAT file using the script **mk_stationfile.m**
 DAT contains a variable called DAT.h.coords with lat and lon already converted to meter. 
-The file returned from mk_stationfile.m will be called
-- stations_utm_NN_yyyyddd.txt
+The file returned from mk_stationfile.m will be called stations_utm_NN_yyyyddd.txt
 
 The information in the stationfile will be used to compute theoretical minimum and maximum wavenumber values based on the largest and smallest station spacing within the array.
 Note, however, that these limits will be the same for all days processed, so that the txt file should contain location data for the complete array, and not just the stations active on a particular day.
@@ -80,9 +77,7 @@ Before you proceed it is recommended to do a quality check on the rearranged dat
 2) Define processing parameters to perform beamforming
 -------------------------------------------------------
 
-Open the script
-- b3am_param.m
-and fill in the required information line by line. 
+Open the script **b3am_param.m** and fill in the required information line by line. 
 Comments and examples are provided to help you with the correct format etc.
 Essential parameters concern:
 - in- and output data locations
@@ -92,9 +87,7 @@ Essential parameters concern:
 - beamforming method
 - parallel computing
 
-Run the script
-- b3am_check.m
-which will print in the command line
+Run the script **b3am_check.m** which will print in the command line
 - min/max station spacing
 - min/max wavelength
 - min/max wavenumber
@@ -106,8 +99,7 @@ Wathelet et al. (2008) suggest to limit the wavenumber range to values for which
 3) Run the beamformer
 ----------------------
 
-Once all processing parameters are defined in b3am_param.m you can start the beamformer by running
-- b3am.m
+Once all processing parameters are defined in b3am_param.m you can start the beamformer by running **b3am.m**.
 Note that this script can partly run in parallel so you might want to make use of parallel computing facilities on a remote cluster.
 
 B3AM performs the four major steps successively:
@@ -125,8 +117,7 @@ The script provides output in the command line documenting its progress.
 In your output folder the file procpars.mat appears that contains all processing parameters used in the beamforming process, such as the resolution of the wavenumber grid (kgrid), the frequency range (freqs), and so on. These values will be taken from this file when plotting.
 
 The beamforming results are stored in the output directory that you specified in b3am_param.m
-one filed is saved for each frequency ffff, called
-- kmax_NN_yyyyddd_ffff.mat
+one filed is saved for each frequency ffff, called kmax_NN_yyyyddd_ffff.mat
 The information stored in each such file refer to the maxima in the beam responses and are
 a_all		% beam power at all extrema
 kr_all		% radial wavenumber at all extrema
@@ -143,8 +134,7 @@ Note that beam response maps are not plotted (as you would create one for each t
 5) Plot the results
 --------------------
 
-To get a first overview of the beamforming results, you can use the script
-- plot_b3am.m
+To get a first overview of the beamforming results, you can use the script **plot_b3am.m**.
 Provide the location of the beamforming results, i.e., the max files ('dir_in'), and a directory to save the figures in ('dir_out').
 If all plot options are set to true you will obtain the following 8 Figures:
 1) Wavefield composition: absolute contribution per frequency
@@ -161,8 +151,8 @@ The following parameters also need to be defined:
 
 Note that, prior to plotting, this script performs essential analysis steps. In the section "Wave type analysis" results are sorted with respect to their detected wave type before they can be plotted accordingly.
 
-EXAMPLES
-========
+B3AM in the Literature
+======================
 
 Finger, C., & Löer, K. (2024). Depth of sudden velocity changes derived from multi‐mode Rayleigh waves. Journal of Geophysical Research: Solid Earth, 129(3), e2023JB028322.
 
@@ -182,6 +172,8 @@ REFERENCES
 ===========
 
 Crameri, Fabio. (2021). Scientific colour maps (7.0.1). Zenodo. https://doi.org/10.5281/zenodo.5501399
+
+Thurber, C. and Roecker, S. Parkfield Passive Seismic Array [Data set]. International Federation of Digital Seismograph Networks, 2000. http://doi.org/10.7914/SN/XN_2000
 
 Wathelet, M., Jongmans, D., Ohrnberger, M., & Bonnefoy-Claudet, S. (2008). Array performances for ambient vibrations on a shallow structure and consequences over V s inversion. Journal of Seismology, 12, 1-19.
 
