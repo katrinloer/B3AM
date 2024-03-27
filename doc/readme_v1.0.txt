@@ -6,6 +6,7 @@ by k.loer@tudelft.nl
 B3AMpy (Python version): https://github.com/katrinloer/B3AM#python-version-httpsgithubcomcl-fingerb3ampy
 
 Changes since v0.1:
+- Example added
 - b3am_param.m: frequency range now to be provided manually
 - plot_b3am.m: bug fixed in direction of arrival plots; export_fig.m not required anymore
 - f_extrema24.m: error fixed in computation of standard deviation
@@ -17,6 +18,13 @@ Changes since v0.1:
 B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. 
 
 B3AM performs beamforming analysis on short time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types.
+
+Parkfield Example
+==================
+
+The folder Example_Parkfield contains example output data and figures as returned by B3AM for one day of ambient noise recorded at the Parkfield array, California, US (Thurber and Roecker, 2000). The data are publicly available from the Seismological Facility for the Advancement of Geoscience (SAGE, former IRIS), and can be downloaded directly into MATLAB. Go to the SAGE homepage to download the MATLAB script irisFetch.m (http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisfetch.m/) and the required Java library (http://ds.iris.edu/ds/nodes/dmc/software/downloads/IRIS-WS/2-20-1/#Download). You can then use the script iris_getrawdata_example.m provided with the B3AM package to download data from the Parkfield (or another) array. In the script, specify the path to your irisFetch.m script and the Java library as both will be used in iris_getrawdata_example.m. Further parameters you need to define are the start and end date, the network code, names of stations in the network, channels, and storage location. The default values in the script correspond to those used for the example. Expect the download to take up to a few minutes per station for a single day of data depending on your network speed (here, it took around 25 minutes to download data from 34 stations).
+
+Follow the steps below to reprodoce the figures in Example_Parkfield/Figures. Again, default values provided in the code should produce the example output.
 
 0) What you need
 -----------------
@@ -154,8 +162,8 @@ The following parameters also need to be defined:
 
 Note that, prior to plotting, this script performs essential analysis steps. In the section "Wave type analysis" results are sorted with respect to their detected wave type before they can be plotted accordingly.
 
-EXAMPLES
-========
+B3AM in the Literature
+======================
 
 Finger, C., & Löer, K. (2024). Depth of sudden velocity changes derived from multi‐mode Rayleigh waves. Journal of Geophysical Research: Solid Earth, 129(3), e2023JB028322.
 
@@ -175,6 +183,8 @@ REFERENCES
 ===========
 
 Crameri, Fabio. (2021). Scientific colour maps (7.0.1). Zenodo. https://doi.org/10.5281/zenodo.5501399
+
+Thurber, C. and Roecker, S. Parkfield Passive Seismic Array [Data set]. International Federation of Digital Seismograph Networks, 2000. http://doi.org/10.7914/SN/XN_2000
 
 Wathelet, M., Jongmans, D., Ohrnberger, M., & Bonnefoy-Claudet, S. (2008). Array performances for ambient vibrations on a shallow structure and consequences over V s inversion. Journal of Seismology, 12, 1-19.
 
