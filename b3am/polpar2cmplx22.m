@@ -26,7 +26,7 @@ function Z = polpar2cmplx22(ppar)
 % Early version, please don't distribute yet.
 % 
 % last modified: Nov 2022
-% Katrin Loer
+% Katrin Loer (k.loer@tudelft.nl)
 
 % Pre-allocate mode vectors for polarization
 Z = zeros(3,size(ppar,1));

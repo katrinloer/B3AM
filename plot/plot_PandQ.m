@@ -1,5 +1,9 @@
 %% Plot beam response P and polarisation matrix Q for single frequency and time window
 % Note: variables need to be in the workspace (e.g., after running b3am.m)
+% 
+% Katrin Loer
+% k.loer@tudelft.nl
+% last modified: Mar 2024
 
 % close all
 

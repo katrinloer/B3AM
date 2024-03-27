@@ -52,7 +52,7 @@
 %
 %--------------------------------------------------------------------------
 % Katrin Loer
-% katrin.loer@abdn.ac.uk
+% k.loer@tudelft.nl
 % Oct 2018
 % Last modified: 
 % Mar 2024 (bug fixed reading directories on Mac)

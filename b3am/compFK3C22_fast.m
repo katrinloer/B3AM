@@ -69,7 +69,7 @@ function [P,Q,kr,kth,polstates] = compFK3C22_fast(coords,DFT3C,kgrid,agrid,polst
 % 
 % Early version, please don't distribute yet.
 %
-% Last modified by Katrin Loer (katrin.loer@abdn.ac.uk)
+% Last modified by Katrin Loer (k.loer@tudelft.nl)
 % December 2022
 % -------------------------------------------------------------------------
 

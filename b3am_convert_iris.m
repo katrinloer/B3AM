@@ -32,7 +32,9 @@
 % shortened (when too long), deleted or appended with zeros (when too short)
 % --> info_iris2dat....txt
 %
-% Katrin Loer, May 2016
+% Katrin Loer
+% k.loer@tudelft.nl
+% May 2016
 % Last modified: 
 % Mar 2024 (bug fixed in appending data with zeros)
 %--------------------------------------------------------------------------
