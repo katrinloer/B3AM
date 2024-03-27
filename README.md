@@ -1,7 +1,7 @@
 # B3AM Userguide
 version 1.0
 by Katrin Löer
-katrin.loer@abdn.ac.uk
+k.loer@tudelft.nl
 
 [![View B3AM on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/128489-b3am)
 
