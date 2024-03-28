@@ -7,11 +7,11 @@ k.loer@tudelft.nl
 
 Python version: https://github.com/cl-finger/B3Ampy
 ----------
-B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. 
+B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. Compared to standard (single-component) beamforming analysis, B3AM integrates all three components recorded at every seismometer. Considering the phase shifts across the components, it identifies wave-specific particle motion and hence discriminates different wave types on account of their polarisation. B3AM performs beamforming analysis on short time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types. 
 
-B3AM performs beamforming analysis on short time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types.
+B3AM can be used with three-component arrays from the lab to the field scale, provided ambient noise is available in the required frequency range. This implementation of the beamformer provides a "fast" option that does not compute the cross-spectral density matrix of the data explicitly, which reduces computation times significantly and makes it feasible to compute beam responses for a full day of data recorded on 100s of stations on a standard laptop PC.
 
-Changes since v0.1:
+**Changes since v0.1:**
 - Example added 
 - b3am_param.m: frequency range now to be provided manually
 - plot_b3am.m: bug fixed in direction of arrival plots; export_fig.m not required anymore
@@ -19,17 +19,10 @@ Changes since v0.1:
 - b3am_convert_iris.m/b3am_convert_mseed.m: added option to zero-pad incomplete data, improved functionality
 - date2doy.m function provided for convenience
 - batlowS.mat categorical colour map (Crameri, 2021) provided for convenience
-- plots provided in the Folder 'Figures' have been created with this version
+- plots provided in the Folder 'Example_Parkfield/Figures' have been created with this version
 
-Parkfield Example
-=================
-
-The folder _Example_Parkfield_ contains example output data and figures as returned by B3AM for one day of ambient noise recorded at the Parkfield array, California, US (Thurber and Roecker, 2000). The data are publicly available from the Seismological Facility for the Advancement of Geoscience (SAGE, former IRIS), and can be downloaded directly into MATLAB. Go to the SAGE homepage to download the MATLAB script irisFetch.m (http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisfetch.m/) and the required Java library (http://ds.iris.edu/ds/nodes/dmc/software/downloads/IRIS-WS/2-20-1/#Download). You can then use the script iris_getrawdata_example.m provided with the B3AM package to download data from the Parkfield (or another) array. In the script, specify the path to your irisFetch.m script and the Java library as both will be used in **iris_getrawdata_example.m**. Further parameters you need to define are the start and end date, the network code, names of stations in the network, channels, and storage location. **The default values in the script correspond to those used for the example**. Expect the download to take up to a few minutes per station for a single day of data depending on your network speed (here, it took around 25 minutes to download data from 34 stations).
-
-Follow the steps below to reprodoce the figures in Example_Parkfield/Figures. Again, default values provided in the code should produce the example output.
-
-0) What you need
------------------
+System Requirements
+===================
 
 - Matlab R2020b or newer
 - your 3-component array data (in mseed or .mat format)
@@ -45,6 +38,13 @@ Functions by other authors INCLUDED in this toolbox for convenience:
 - date2doy.m by Anthony Kendall (https://www.mathworks.com/matlabcentral/fileexchange/18316-date-to-decimal-day-of-year)
 - extrema.m and extrema2.m by Carlos Adrin Vargas Aguilera (https://www.mathworks.com/matlabcentral/fileexchange/12275-extrema-m-extrema2-m)
 - FK3C package by Nima Riahi (https://github.com/nimariahi/fk3c)
+
+Parkfield Example
+=================
+
+The folder _Example_Parkfield_ contains example output data and figures as returned by B3AM for one day of ambient noise recorded at the Parkfield array, California, US (Thurber and Roecker, 2000). The data are publicly available from the Seismological Facility for the Advancement of Geoscience (SAGE, former IRIS), and can be downloaded directly into MATLAB. Go to the SAGE homepage to download the MATLAB script irisFetch.m (http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisfetch.m/) and the required Java library (http://ds.iris.edu/ds/nodes/dmc/software/downloads/IRIS-WS/2-20-1/#Download). You can then use the script iris_getrawdata_example.m provided with the B3AM package to download data from the Parkfield (or another) array. In the script, specify the path to your irisFetch.m script and the Java library as both will be used in **iris_getrawdata_example.m**. Further parameters you need to define are the start and end date, the network code, names of stations in the network, channels, and storage location. **The default values in the script correspond to those used for the example**. Expect the download to take up to a few minutes per station for a single day of data depending on your network speed (here, it took around 25 minutes to download data from 34 stations).
+
+Follow the steps below to reprodoce the figures in Example_Parkfield/Figures. Again, default values provided in the code should produce the example output.
 
 Let's get started...
 ====================
