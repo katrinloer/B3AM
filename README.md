@@ -7,6 +7,15 @@ k.loer@tudelft.nl
 
 Python version: https://github.com/cl-finger/B3Ampy
 ----------
+
+Pre-print
+---------
+An article containing a detailed description of the theory behind three-componennt beamforming and the polarisation analysis in particular as well as a worked example for the MATLAB implementation has been submitted to and Seismica and is currently ondergoing final editing steps. In the meantime you can find a pre-print of the article here: https://doi.org/10.31223/X53T3R 
+
+Please refer back to this site for updates!
+
+About B3AM
+----------
 B3AM is a toolbox for easy and fast beamforming analysis of three-component array data providing estimates of surface wave dispersion curves, frequency-dependent wavefield composition, and the direction of arrival for different wave types and frequencies from ambient seismic noise. Compared to standard (single-component) beamforming analysis, B3AM integrates all three components recorded at every seismometer. Considering the phase shifts across the components, it identifies wave-specific particle motion and hence discriminates different wave types on account of their polarisation. B3AM performs beamforming analysis on short time-frequency windows of the provided data and identifies maxima in the beam response of each window. Each detected maximum is characterised by its wavenumber, direction of arrival (azimuth), and polarisation, i.e., wave type. A summary of the results of all windows is provided in histograms that show, for example, wavenumber as a function of frequency for different wave types. 
 
 B3AM can be used with three-component arrays from the lab to the field scale, provided ambient noise is available in the required frequency range. This implementation of the beamformer provides a "fast" option that does not compute the cross-spectral density matrix of the data explicitly, which reduces computation times significantly and makes it feasible to compute beam responses for a full day of data recorded on 100s of stations on a standard laptop PC.
