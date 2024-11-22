@@ -8,11 +8,11 @@ k.loer@tudelft.nl
 Python version: https://github.com/cl-finger/B3Ampy
 ----------
 
-Pre-print
+Reference
 ---------
-An article containing a detailed description of the theory behind three-componennt beamforming and the polarisation analysis in particular as well as a worked example for the MATLAB implementation has been submitted to and Seismica and is currently ondergoing final editing steps. In the meantime you can find a pre-print of the article here: https://doi.org/10.31223/X53T3R 
+An article containing a **detailed description** of the theory behind three-componennt beamforming and the polarisation analysis in particular as well as a **worked example** for the MATLAB implementation has been published with Seismica. Please cite when using the package for your research:
 
-Please refer back to this site for updates!
+Löer, K., & Finger, C. (2024). B3AM: A beamforming toolbox for three-component ambient seismic noise analysis. _Seismica_, _3_(2). https://doi.org/10.26443/seismica.v3i2.1343
 
 About B3AM
 ----------
@@ -164,6 +164,10 @@ B3AM in the Literature
 ======================
 
 Finger, C., & Löer, K. (2024). Depth of sudden velocity changes derived from multi‐mode Rayleigh waves. Journal of Geophysical Research: Solid Earth, 129(3), e2023JB028322.
+
+Kennedy, H., Löer, K., & Gilligan, A. (2022). Constraints on fracture distribution in the Los Humeros geothermal field from beamforming of ambient seismic noise. Solid earth, 13(12), 1843-1858, https://doi.org/10.5194/se-13-1843-2022
+
+Kennedy, H., Finger, C., Löer, K., & Gilligan, A. (2024). Investigating Rayleigh wave anisotropy in faulted media with three-component beamforming: insights from numerical models and applications for geothermal exploration, pre-print: https://doi.org/10.31223/X5DD7X
 
 Löer, K., Finger, C., Obiri, E., and Kennedy, H.: A comprehensive beamforming toolbox to characterise surface and body waves in three-component ambient noise wavefields, EGU General Assembly 2023, Vienna, Austria, 24–28 Apr 2023, EGU23-5670, https://doi.org/10.5194/egusphere-egu23-5670, 2023.
 
